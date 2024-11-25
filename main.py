@@ -1,23 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, EmailStr
-
-# Clase para representar los datos del Cliente
-class Customer(BaseModel):
-    """
-    Modelo de datos para un cliente.
-
-    Atributos:
-    - name: Nombre del cliente.
-    - description: Descripción opcional del cliente.
-    - email: Dirección de correo electrónico válida.
-    - age: Edad del cliente.
-    """
-    name: str
-    description: str | None
-    email: EmailStr
-    age: int
+from models import Customer, Transaction, Invoice
     
 # Inicializar la aplicación FastAPI
 app = FastAPI()
@@ -47,11 +31,20 @@ async def get_time(iso_code: str, format_12hr: bool = False):
     Endpoint para obtener la hora actual en la zona horaria de un país.
 
     Parámetros:
-    - iso_code: Código ISO del país (ejemplo: "CO", "MX").
-    - format_12hr: Booleano que indica si se debe retornar la hora en formato de 12 horas (True) o 24 horas (False).
+    - iso_code (str): Código ISO del país (ejemplo: "CO", "MX").
+    - format_12hr (bool, opcional): Booleano que indica si se debe retornar la hora en formato de 12 horas (True) o 24 horas (False). 
+    En formato de 12 horas, se incluye el sufijo AM/PM para indicar si es antes o después del mediodía. 
+    Por defecto, es False (formato de 24 horas).
 
     Retorna:
-    - Un diccionario con la hora actual formateada, el código ISO y la zona horaria.
+    - dict: Diccionario con los siguientes campos:
+        - time (str): Hora actual formateada.
+        - iso_code (str): Código ISO del país.
+        - timezone (str): Nombre de la zona horaria correspondiente al país.
+
+    Excepciones:
+    - HTTPException 400: Si el código ISO proporcionado no es válido.
+    - HTTPException 500: Si no se encuentra la zona horaria asociada al código ISO.
     """
     
     # Convertir el código ISO a mayúsculas y validarlo
@@ -92,3 +85,29 @@ async def create_customer(customer_data: Customer):
     - Los datos del cliente que se recibieron.
     """
     return customer_data
+
+@app.post("/transactions")
+async def create_transaction(transaction_data: Transaction):
+    """
+    Endpoint para crear una transacción.
+
+    Parámetros:
+    - transaction_data: Objeto JSON que contiene los datos de la transacción.
+
+    Retorna:
+    - Los datos de la transacción que se recibieron.
+    """
+    return transaction_data
+
+@app.post("/invoices")
+async def create_invoices(invoices_data: Invoice):
+    """
+    Endpoint para crear una factura.
+
+    Parámetros:
+    - invoice_data: Objeto JSON que contiene los datos de la factura.
+
+    Retorna:
+    - Los datos de la factura que se recibieron.
+    """
+    return invoices_data
