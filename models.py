@@ -1,22 +1,37 @@
 # Clase para representar los datos del Cliente
 from pydantic import BaseModel, EmailStr
 
-class Customer(BaseModel):
+class CustomerBase(BaseModel):
     """
-    Modelo de datos para un cliente.
+    Modelo base para un cliente.
 
     Atributos:
-    - id (int): Identificador único del cliente.
     - name (str): Nombre del cliente.
     - description (str | None): Descripción opcional del cliente.
     - email (EmailStr): Dirección de correo electrónico válida del cliente.
     - age (int): Edad del cliente.
     """
-    id: int
     name: str
     description: str | None
     email: EmailStr
     age: int
+
+class CustomerCreate(CustomerBase):
+    """
+    Modelo para la creación de un cliente.
+
+    Hereda los atributos del modelo base `CustomerBase`.
+    """
+    pass
+
+class Customer(CustomerBase):
+    """
+    Modelo de datos para un cliente existente.
+
+    Atributos adicionales:
+    - id (int | None): Identificador único del cliente. Por defecto, puede ser `None` si no está asignado.
+    """
+    id: int | None = None
 
 class Transaction(BaseModel):
     """
@@ -49,7 +64,7 @@ class Invoice(BaseModel):
         """
         Calcula el monto total de todas las transacciones incluidas en la factura.
 
-        Returns:
+        Retorna:
         - int: La suma total de los montos de las transacciones.
         """
         return sum(transaction.ammount for transaction in self.transactions)

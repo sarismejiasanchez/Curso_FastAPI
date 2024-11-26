@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from fastapi import FastAPI, HTTPException
-from models import Customer, Transaction, Invoice
+from models import Customer, CustomerCreate, Transaction, Invoice
     
 # Inicializar la aplicación FastAPI
 app = FastAPI()
@@ -14,6 +14,10 @@ country_timezones = {
     "BR": "America/Sao_Paulo",
     "PE": "America/Lima"
 }
+
+# Base de datos simulada
+db_customers: list[Customer] = []
+db_invoices: list[Invoice] = []
 
 @app.get("/")
 async def root():
@@ -32,15 +36,11 @@ async def get_time(iso_code: str, format_12hr: bool = False):
 
     Parámetros:
     - iso_code (str): Código ISO del país (ejemplo: "CO", "MX").
-    - format_12hr (bool, opcional): Booleano que indica si se debe retornar la hora en formato de 12 horas (True) o 24 horas (False). 
-    En formato de 12 horas, se incluye el sufijo AM/PM para indicar si es antes o después del mediodía. 
-    Por defecto, es False (formato de 24 horas).
+    - format_12hr (bool, opcional): Si es True, retorna la hora en formato 12 horas (incluyendo AM/PM). 
+    Por defecto es False (formato 24 horas).
 
     Retorna:
-    - dict: Diccionario con los siguientes campos:
-        - time (str): Hora actual formateada.
-        - iso_code (str): Código ISO del país.
-        - timezone (str): Nombre de la zona horaria correspondiente al país.
+    - dict: Hora actual formateada, código ISO, y nombre de la zona horaria.
 
     Excepciones:
     - HTTPException 400: Si el código ISO proporcionado no es válido.
@@ -71,48 +71,81 @@ async def get_time(iso_code: str, format_12hr: bool = False):
         "iso_code": iso,
         "timezone": timezone_name
     }
+    
 
-
-@app.post("/customers")
-async def create_customer(customer_data: Customer):
+@app.post("/customers", response_model=Customer)
+async def create_customer(customer_data: CustomerCreate):
     """
-    Endpoint para crear un cliente.
+    Crea un nuevo cliente.
 
     Parámetros:
-    - customer_data: Objeto JSON que contiene los datos del cliente.
+    - customer_data (CustomerCreate): Datos del cliente.
 
     Retorna:
-    - Los datos del cliente que se recibieron.
+    - Customer: Cliente creado con un identificador único.
     """
-    return customer_data
+    
+    # Genera un nuevo ID único para el cliente. 
+    # Si la lista de clientes no está vacía, toma el ID del último cliente y le suma 1; 
+    # de lo contrario, asigna 1 como ID inicial.
+    new_id = (db_customers[-1].id + 1) if db_customers else 1
+    
+    # Valida y crea una instancia del modelo Customer a partir de los datos proporcionados, 
+    # asegurándose de que cumplan con las reglas definidas en el modelo
+    customer = Customer.model_validate(customer_data.model_dump())
+    customer.id = new_id
+    db_customers.append(customer)
+    return customer
+
+
+@app.get("/customers", response_model=list[Customer])
+async def list_customer():
+    """
+    Lista todos los clientes registrados.
+
+    Retorna:
+    - list[Customer]: Lista de clientes registrados en la base de datos.
+    """
+    return db_customers
 
 @app.post("/transactions")
 async def create_transaction(transaction_data: Transaction):
     """
-    Endpoint para crear una transacción.
+    Crea una nueva transacción.
 
     Parámetros:
-    - transaction_data: Objeto JSON que contiene los datos de la transacción.
+    - transaction_data (Transaction): Datos de la transacción.
 
     Retorna:
-    - Los datos de la transacción que se recibieron.
+    - Transaction: Transacción creada.
     """
     return transaction_data
 
 @app.post("/invoices")
-async def create_invoices(invoices_data: Invoice):
+async def create_invoices(invoice_data: Invoice):
     """
-    Crea una factura y calcula el total dinámicamente.
+    Crea una factura y calcula el total basado en las transacciones.
 
     Parámetros:
-    - invoice_data (Invoice): Objeto JSON que representa una factura.
+    - invoice_data (Invoice): Datos de la factura.
 
     Retorna:
-    - La factura con el total calculado basado en las transacciones.
+    - Invoice: Factura creada con el total calculado.
     """
+    # Crea una nueva instancia del modelo Invoice con los datos proporcionados:
+    # - Asigna un nuevo ID basado en el último ID en db_invoices, incrementándolo en 1, 
+    # o utiliza 1 si db_invoices está vacío.
+    # - Asigna al cliente los datos del cliente asociados a la factura (invoice_data.customer).
+    # - Asigna las transacciones incluidas en la factura (invoice_data.transactions).
+    invoice = Invoice(
+        id=(db_invoices[-1].id + 1) if db_invoices else 1,
+        customer=invoice_data.customer,
+        transactions=invoice_data.transactions,
+    )
+    db_invoices.append(invoice)
     return {
-        "id": invoices_data.id,
-        "customer": invoices_data.customer,
-        "transactions": invoices_data.transactions,
-        "total": invoices_data.ammount_total  # Usar la propiedad calculada
-        }
+        "id": invoice.id,
+        "customer": invoice.customer,
+        "transactions": invoice.transactions,
+        "total": invoice.ammount_total
+    }
