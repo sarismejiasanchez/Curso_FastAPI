@@ -39,12 +39,10 @@ class Invoice(BaseModel):
     - id (int): Identificador único de la factura.
     - customer (Customer): Información del cliente asociado a la factura.
     - transactions (list[Transaction]): Lista de transacciones incluidas en la factura.
-    - total (int): Total calculado manualmente para la factura.
     """
     id: int
     customer: Customer
     transactions: list[Transaction]
-    total: int
     
     @property
     def ammount_total(self) -> int:

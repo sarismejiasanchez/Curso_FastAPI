@@ -102,12 +102,17 @@ async def create_transaction(transaction_data: Transaction):
 @app.post("/invoices")
 async def create_invoices(invoices_data: Invoice):
     """
-    Endpoint para crear una factura.
+    Crea una factura y calcula el total dinámicamente.
 
     Parámetros:
-    - invoice_data: Objeto JSON que contiene los datos de la factura.
+    - invoice_data (Invoice): Objeto JSON que representa una factura.
 
     Retorna:
-    - Los datos de la factura que se recibieron.
+    - La factura con el total calculado basado en las transacciones.
     """
-    return invoices_data
+    return {
+        "id": invoices_data.id,
+        "customer": invoices_data.customer,
+        "transactions": invoices_data.transactions,
+        "total": invoices_data.ammount_total  # Usar la propiedad calculada
+        }
